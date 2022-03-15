@@ -1,13 +1,24 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Basic 3D World</title>
-  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-  <link rel="stylesheet" type="text/css" href="base.css">
+<html lang="en">
+	<head>
+		<title>Ammo.js softbody volume demo</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="main.css">
+		<style>
+			body {
+				color: #333;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="info">
+			Right click to throw a ball<br>
+			Hold to charge
+		</div>
+		<div id="power"><strong id="power-value">Power 0%</strong></div>
+		<div id="container"></div>
 
-  <script src="https://cdn.jsdelivr.net/gh/kripken/ammo.js@HEAD/builds/ammo.wasm.js"></script>
-</head>
-<body>
-  <script src="./main.js" type="module"></script>
-</body>
+		<script src="https://cdn.jsdelivr.net/gh/kripken/ammo.js@HEAD/builds/ammo.wasm.js"></script>
+		<script src="index.js" type="module"></script>
+	</body>
 </html>

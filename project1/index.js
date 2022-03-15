@@ -4,14 +4,14 @@ import Stats from './js/libs/stats.module.js';
 
 // Graphics variables
 let container, stats;
-let camera, controls, scene, renderer;
+let camera, controls, scene, renderer,effectControls;
 let textureLoader;
 const clock = new THREE.Clock();
 let clickRequest = false;
 const mouseCoords = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
-var ballMaterial;
+var ballMaterial, treetopMaterial, treebaseMaterial;
 const pos = new THREE.Vector3();
 const quat = new THREE.Quaternion();
 
@@ -19,6 +19,9 @@ const quat = new THREE.Quaternion();
 const gravityConstant = - 9.8;
 let physicsWorld;
 const rigidBodies = [];
+const coin_list = [];
+var coin_counter =0;
+var coin_rotation_velocity = 100;
 const margin = 0.05;
 let transformAux1;
 
@@ -32,6 +35,7 @@ Ammo().then( function ( AmmoLib ) {
 	Ammo = AmmoLib;
 
 	init();
+	setupGUI();
 	animate();
 
 } );
@@ -51,12 +55,12 @@ function init() {
 function initGraphics() {
 	container = document.getElementById( 'container' );
 
-	camera = new THREE.PerspectiveCamera( 100, window.innerWidth / window.innerHeight, 0.2, 2000 );
-	camera.position.set(0,5, 15);
+	camera = new THREE.PerspectiveCamera( 65, window.innerWidth / window.innerHeight, 0.2, 2000 );
+	camera.position.set(0,5, 0);
 
 	scene = new THREE.Scene();
 	scene.background = new THREE.Color( 0xbfd1e5 );
-	scene.fog = new THREE.Fog(0xebe7ee, 1, 40);
+	scene.fog = new THREE.Fog(0xebe7ee, 5, 40);
 
 
 	renderer = new THREE.WebGLRenderer();
@@ -66,16 +70,16 @@ function initGraphics() {
 	container.appendChild( renderer.domElement );
 
 	controls = new OrbitControls( camera, renderer.domElement );
-	controls.enableDamping = false;
-	controls.enablePan = false;
-	controls.enableZoom = false;
-	controls.maxPolarAngle = Math.PI/2.5;
-	controls.target.set( 0, 0, 0 );
+	// controls.enableDamping = false;
+	// controls.enablePan = false;
+	// controls.enableZoom = false;
+	// controls.maxPolarAngle = Math.PI/2.5;
+	controls.target.set( 0, 0, 15 );
 	controls.update();
 
 	textureLoader = new THREE.TextureLoader();
 
-	const ambientLight = new THREE.AmbientLight( 0x404040 );
+	const ambientLight = new THREE.AmbientLight( 0x222222 );
 	scene.add( ambientLight );
 
 	const light = new THREE.DirectionalLight( 0xffffff, 1 );
@@ -102,12 +106,14 @@ function initGraphics() {
 
 
 	window.addEventListener( 'resize', onWindowResize );
+
+	// load materials
+	// ball texture from https://github.com/WhitestormJS/StreetBasketballGame/tree/gh-pages/textures
  	ballMaterial=  new THREE.MeshPhongMaterial({color: 0x808080, map:textureLoader.load("./textures/ball.png"), 
           normalMap:textureLoader.load("./textures/ball_normal.png")})
 }
 
 function initPhysics() {
-
 	// Physics configuration
 	const collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
 	const dispatcher = new Ammo.btCollisionDispatcher( collisionConfiguration );
@@ -120,11 +126,10 @@ function initPhysics() {
 }
 
 function createObjects() {
-
 	// Ground
-	pos.set( 0, - 0.5, 0 );
+	pos.set( 0, 0, 0 );
 	quat.set( 0, 0, 0, 1 );
-	const ground = createParalellepiped( 100, 1, 100, 0, pos, quat, new THREE.MeshPhongMaterial( { color: 0xFFFFFF } ) );
+	const ground = createParalellepiped( 100, 0.5, 100, 0, pos, quat, new THREE.MeshPhongMaterial( { color: 0xFFFFFF } ) );
 	ground.castShadow = true;
 	ground.receiveShadow = true;
 	textureLoader.load( 'textures/grid.png', function ( texture ) {
@@ -137,16 +142,60 @@ function createObjects() {
 
 	} );
 
+	// spawn random trees
 	for (let i = 0; i < 20; i++) {
-		
-		const rx = randomNumber(),
-			ry = randomNumber(),
-			rz = randomNumber();
-		pos.set(rx*35, Math.abs(ry*15), rz*25);
+		// create top 
 		var targetRot = new THREE.Quaternion()
-		const obstacle = createParalellepiped( 2, 2, 2, 0, pos, targetRot, new THREE.MeshPhongMaterial( { color: 0x606060 } ) );
-		obstacle.castShadow = true;
-		obstacle.receiveShadow = true;
+		var rx = randomNumber()*35,
+			ry = randomNumber()*15,
+			rz = randomNumber()*35;
+		ry = Math.abs(ry);
+		if (ry-2 < 0) ry=2;
+		pos.set(rx, ry, rz);
+		
+		// sources from textures:
+		// https://minecraft.novaskin.me/gallery/tag/texture:leaves_spruce
+		// https://www.filterforge.com/filters/9043-normal.html
+		treetopMaterial = new THREE.MeshPhongMaterial({color: 0xffffff, map:textureLoader.load("./textures/leaf.png"), 
+			normalMap:textureLoader.load("./textures/leaf_normal.jpg")})
+		const top = createParalellepiped( 6, 6, 6, 0, pos, targetRot, treetopMaterial );
+		top.castShadow = true;
+		top.receiveShadow = true;
+
+		// create base
+		const base_h = pos.y;
+		pos.set(pos.x,base_h/2, pos.z);
+
+		// sources from textures:
+		// http://4.bp.blogspot.com/-R_1PjGEOeC0/T6AuUnFsHaI/AAAAAAAABPQ/J9IdcdWX5aU/s1600/minecraft_tree_wood.jpg
+		// https://filterforge.com/filters/7635-normal.html
+		treebaseMaterial = new THREE.MeshPhongMaterial({color: 0x808080, map:textureLoader.load("./textures/tree.jpg"), 
+			normalMap:textureLoader.load("./textures/tree_normal.jpg")})
+
+		const base = createParalellepiped(2, base_h, 2, 0, pos, targetRot, treebaseMaterial);
+		base.castShadow = true;
+		base.receiveShadow = true;
+	}
+
+	var puntual = new THREE.PointLight(0xFFFFFF,0.2);
+	puntual.position.set(0,0,0);
+	// spawn random coins 
+	for (let i = 0 ; i < 10 ; i++) {
+		var rx = randomNumber()*35,
+			rz = randomNumber()*35,
+		ry = 2;
+		
+		const coin_material = new THREE.MeshStandardMaterial( { color: "yellow" , roughness: 0.1, metalness: 0.9, emissive: 0x725a03 });
+		const coin = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .2, 20, 20), coin_material );
+		coin.position.copy(new THREE.Vector3(rx,ry,rz));
+		coin.rotation.z = Math.PI/2;
+
+		const decoration = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1, .4), coin_material);
+		decoration.rotation.z = Math.PI/2;
+		scene.add(coin);
+		coin.add(decoration);
+		coin.add(puntual);
+		coin_list.push(coin);
 	}
 }
 
@@ -291,12 +340,40 @@ function render() {
 
 	updatePhysics( deltaTime );
 
+	handleCoins();
+
 	chargeThrow();
 
 	processClick();
 
+	updateFromGUI();
+
 	renderer.render( scene, camera );
 
+}
+
+function handleCoins() {
+	document.getElementById("coin_value").innerHTML= coin_counter + " COINS";
+	coin_list.forEach((coin, coin_index) => {
+		coin.rotation.y +=  Math.PI/coin_rotation_velocity;
+
+		const coin_pos = coin.position;
+		for ( let i = 0, il = rigidBodies.length; i < il; i ++ ) {
+			const ball = rigidBodies[i];
+			const ball_pos = ball.position;
+			const distance = Math.sqrt(	Math.pow(ball_pos.x-coin_pos.x, 2)+
+										Math.pow(ball_pos.y-coin_pos.y, 2)+
+										Math.pow(ball_pos.z-coin_pos.z, 2));
+			const min_distance = coin.geometry.parameters.radiusTop+ball.geometry.parameters.radius;
+
+			if(distance<min_distance) {
+				coin_list.splice(coin_index, 1);
+				scene.remove(coin);
+				coin_counter++;
+				break;
+			}
+		}
+	});
 }
 
 function updatePhysics( deltaTime ) {
@@ -319,6 +396,32 @@ function updatePhysics( deltaTime ) {
 	}
 }
 
-function randomNumber(min=-1, max=1) {
-  return Math.random() * (max - min) + min;
+function randomNumber(min=-1, max=1, type="float") {
+	if(type=="float") return Math.random() * (max - min) + min;
+	return Math.floor(Math.random() * (max - min) + min);
+}
+
+function setupGUI(){
+	// Controles
+	effectControls = {
+		fog_max_distance: 70.0, 
+		fog_min_distance: 4.0, 
+		fog_color: "rgb(255,255,255)",
+		coin_rotation: 1.0
+	};
+
+	// Interfaz
+	var gui = new dat.GUI();
+	var folder = gui.addFolder("Interfaz juego");
+	folder.add( effectControls, "fog_max_distance", 10.0, 100.0, 1.0).name("Niebla lejos");
+	folder.add( effectControls, "fog_min_distance", 0.0, 10.0, 0.5 ).name("Niebla cerca");
+	folder.addColor( effectControls, "fog_color" ).name("Color niebla");	
+	folder.add( effectControls, "coin_rotation", 0.3, 5.0, 0.1 ).name("Velocidad rotacion moneda");
+}
+
+function updateFromGUI() {
+	scene.fog.far = effectControls.fog_max_distance;
+	scene.fog.near = effectControls.fog_min_distance;
+	scene.fog.color.set(effectControls.fog_color);
+	coin_rotation_velocity = 50.0/effectControls.coin_rotation;
 }

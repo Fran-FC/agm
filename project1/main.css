@@ -51,6 +51,23 @@ button {
 	pointer-events: none;
 	z-index: 1; /* TODO Solve this in HTML */
 }
+#coins {
+	position: absolute;
+	font-size: xx-large;
+	color: rgb(124, 124, 18);
+	bottom: 0px;
+	left: 0px;
+	width: 100%;
+	padding: 30px;
+	box-sizing: border-box;
+	text-align: left;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	z-index: 1; /* TODO Solve this in HTML */
+}
 a, button, input, select {
 	pointer-events: auto;
 }

@@ -1,4 +1,4 @@
 project1.*
-Unity/Materiales
-Unity/Prefabs
+Unity/Materiales/*
+Unity/Prefabs/*
 Unity/s*
